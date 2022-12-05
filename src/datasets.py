@@ -3,7 +3,14 @@ from config import WIDTH, HEIGHT, NUM_CLIP, GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNE
 from utils import gaussian_kernel
 import os, sys
 import pandas as pd
+import numpy as np
+import cv2
+from google.colab.patches import cv2_imshow
 from PIL import Image
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.pyplot import figure
+import random
 import glob
 
 # %%
@@ -68,6 +75,59 @@ def create_gt_heatmap(FRAME_LABEL_PATH, GT_HEATMAP_PATH):
 
         print(str(num_heatmap_saved) + " ground-truth heatmaps are created.")
         print("Number of frames = Number of heatmap saved: ", len(frames) == num_heatmap_saved)
+        
 # %%
-create_gt_heatmap(FRAME_LABEL_PATH, GT_HEATMAP_PATH)
+def visualize_frame_heatmap_box(frame, gt_heatmap):
+    max_index = np.unravel_index(gt_heatmap[:, :, 0].argmax(), gt_heatmap[:, :, 0].shape)   
+    
+    y, x = max_index
+    xmin = x - 5
+    ymin = y - 5
+    xmax = x + 5
+    ymax = y + 5
+    
+    xy = (int(xmin), int(ymin))
+    height = int(ymax - ymin)
+    width = int(xmax - xmin)    
+    
+    fig, ax = plt.subplots(figsize = (15, 10))
+    ax.imshow(frame)
+    
+    rect = patches.Rectangle(xy, width, height, linewidth = 2, edgecolor = 'r', facecolor = 'none')
+    ax.add_patch(rect)
+    
+    plt.show()
+
 # %%
+def visualize_random_frame_heatmap_box(num_clips, num_samples):
+    sample_count = 0    
+    
+    while (sample_count != num_samples):
+      print("==== sample" + str(sample_count + 1) + " ====")
+    
+      clip_number = random.sample(range(1, num_clips + 1), 1)[0]
+      print("-clip number: " + str(clip_number))
+
+      frame_path = FRAME_LABEL_PATH + "clip" + str(clip_number) + "/"
+      gt_heatmap_path = GT_HEATMAP_PATH + "clip" + str(clip_number) + "/"   
+      
+      frames = glob.glob(frame_path + "*.jpg") + glob.glob(frame_path + "*.png") +  glob.glob(frame_path + "*.jpeg")
+      gt_heatmaps = glob.glob(gt_heatmap_path + "*.jpg") + glob.glob(gt_heatmap_path + "*.png") +  glob.glob(gt_heatmap_path + "*.jpeg")
+      num_frames = len(frames)  
+      
+      frames.sort()
+      gt_heatmaps.sort()    
+      
+      frame_number = random.sample(range(0, num_frames), 1)[0]
+      print("-frame number: " + str(frame_number))  
+      
+      sample_frame = cv2.imread(frames[frame_number])
+      sample_gt_heatmap = cv2.imread(gt_heatmaps[frame_number]) 
+      
+      visualize_frame_heatmap_box(sample_frame, sample_gt_heatmap)
+      sample_count += 1
+    
+# %%
+# create_gt_heatmap(FRAME_LABEL_PATH, GT_HEATMAP_PATH)
+# %%
+visualize_random_frame_heatmap_box(NUM_CLIP, 5)
