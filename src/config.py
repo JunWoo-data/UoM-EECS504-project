@@ -10,7 +10,5 @@ GAUSSIAN_KERNEL_VARIANCE = 10
 
 ## datasets.py
 NUM_CLIP = 95
-CLIP_PATH = "/content/drive/My Drive/eecs504/project/data/dataset/clip/"
+FRAME_LABEL_PATH = "/content/drive/My Drive/eecs504/project/data/dataset/frame_label/"
 GROUND_TRUTH_PATH = "/content/drive/My Drive/eecs504/project/data/dataset/ground_truth/"
-
-# %%
