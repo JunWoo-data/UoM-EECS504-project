@@ -11,7 +11,7 @@ output_gt_heatmap_path = GT_HEATMAP_PATH + "clip" + str(2) + "/"
 len(os.listdir(output_gt_heatmap_path))
 
 # %%
-def create_ground_truth_annotations(FRAME_LABEL_PATH, GT_HEATMAP_PATH):
+def create_gt_heatmap(FRAME_LABEL_PATH, GT_HEATMAP_PATH):
     for index in range(1, NUM_CLIP + 1):
         
         
@@ -73,5 +73,5 @@ def create_ground_truth_annotations(FRAME_LABEL_PATH, GT_HEATMAP_PATH):
         print(str(num_heatmap_saved) + " ground-truth heatmaps are created.")
         print("Number of frames = Number of heatmap saved: ", len(frames) == num_heatmap_saved)
 # %%
-create_ground_truth_annotations(FRAME_LABEL_PATH, GT_HEATMAP_PATH)
+create_gt_heatmap(FRAME_LABEL_PATH, GT_HEATMAP_PATH)
 # %%
