@@ -1,5 +1,5 @@
 # %%
-from config import WIDTH, HEIGHT, NUM_CLIP, GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE, FRAME_LABEL_PATH, GT_HEATMAP_PATH
+from config import WIDTH, HEIGHT, NUM_CLIP, GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE, DATA_PATH, FRAME_LABEL_PATH, GT_HEATMAP_PATH
 from utils import gaussian_kernel
 import os, sys
 import pandas as pd
@@ -137,3 +137,91 @@ def visualize_random_frame_heatmap_box(num_samples):
 # create_gt_heatmap()
 # %%
 visualize_random_frame_heatmap_box(5)    
+
+# %%
+def create_train_test_csv(train_frames_ratio):
+    frame_i = []
+    frame_im1 = []
+    frame_im2 = []
+    frame_i_gt_heatmap = []
+
+    test_frames_list = []
+    
+    for index in range(1, NUM_CLIP + 1):
+        frame_path =FRAME_LABEL_PATH + "clip" + str(index) + "/"
+        gt_heatmap_path = GT_HEATMAP_PATH + "clip" + str(index) + "/"     
+        
+        frames = glob.glob(frame_path + "*.jpg") + glob.glob(frame_path + "*.png") +  glob.glob(frame_path + "*.jpeg")
+        frames.sort()       
+        
+        gt_heatmaps  = glob.glob(gt_heatmap_path + "*.jpg") + glob.glob(gt_heatmap_path + "*.png") +  glob.glob(gt_heatmap_path + "*.jpeg")
+        gt_heatmaps.sort()
+        
+        #check if annotation counts equals to image counts
+        assert len(frames) == len(gt_heatmaps)
+        for im , seg in zip(frames,gt_heatmaps):
+          assert(im.split('/')[-1].split(".")[0] ==  seg.split('/')[-1].split(".")[0])
+          
+        label_df = pd.read_csv(frame_path + "Label.csv")
+        
+        num_rows = label_df.shape[0]
+        visibility_map = {}
+
+        for ri in range(0, num_rows):
+            file_name = label_df.iloc[ri][0]
+            visibility = label_df.iloc[ri][1]
+            visibility_map[file_name] = visibility
+
+        for i in range(2, len(frames)):
+            file_name = frames[i].split("/")[-1]
+
+            if visibility_map[file_name] == 3:
+              test_frames_list.append(frames[i])    
+            else:
+              frame_i.append(frames[i])
+              frame_im1.append(frames[i - 1])
+              frame_im2.append(frames[i - 2])
+              frame_i_gt_heatmap.append(gt_heatmaps[i])
+
+
+            assert(frames[i].split('/')[-1].split(".")[0] ==  gt_heatmaps[i].split('/')[-1].split(".")[0])
+            
+    all_frames = pd.DataFrame({"frame_i": frame_i, 
+                               "frame_im1": frame_im1, 
+                               "frame_im2": frame_im2,
+                               "annotation": frame_i_gt_heatmap})
+    
+    num_train_frames = int(all_frames.shape[0] * train_frames_ratio)
+    train_frame_index = []
+    test_frame_index = []
+
+    for ri in range(0, all_frames.shape[0]):
+      if (num_train_frames > 0 ) & (all_frames.iloc[ri][0] not in test_frames_list):
+        train_frame_index.append(ri)
+        num_train_frames -= 1
+      else:
+        test_frame_index.append(ri)
+
+    random.shuffle(train_frame_index)
+    random.shuffle(test_frame_index)
+    
+    train_frames = all_frames.iloc[train_frame_index]
+    test_frames = all_frames.iloc[test_frame_index]
+    
+    train_frames.to_csv(DATA_PATH + "train_frames.csv")
+    print("== Train frames saved:")
+    print("- save path: " + DATA_PATH + "train_frames.csv")
+    print("- file name: train_frames.csv")
+    print("- size: " + str(train_frames.shape))
+    print(" ")
+    
+    test_frames.to_csv(DATA_PATH + "test_frames.csv")
+    print("== Test frames saved:")
+    print("- save path: " + DATA_PATH + "test_frames.csv")
+    print("- file name: test_frames.csv")
+    print("- size: " + str(test_frames.shape))
+    
+    return train_frames, test_frames
+# %%
+train_frames, test_frames = create_train_test_csv(0.7)
+# %%
