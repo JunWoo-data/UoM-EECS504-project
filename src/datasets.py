@@ -7,10 +7,6 @@ from PIL import Image
 import glob
 
 # %%
-output_gt_heatmap_path = GT_HEATMAP_PATH + "clip" + str(2) + "/"
-len(os.listdir(output_gt_heatmap_path))
-
-# %%
 def create_gt_heatmap(FRAME_LABEL_PATH, GT_HEATMAP_PATH):
     for index in range(1, NUM_CLIP + 1):
         
