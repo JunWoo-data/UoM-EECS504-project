@@ -14,11 +14,11 @@ import random
 import glob
 
 # %%
-def create_gt_heatmap(FRAME_LABEL_PATH, GT_HEATMAP_PATH):
+def create_gt_heatmap(frame_label_path, gt_heatmap_path):
     for index in range(1, NUM_CLIP + 1):
-        frame_path = FRAME_LABEL_PATH + "clip" + str(index) + "/"
-        label_path = FRAME_LABEL_PATH + "clip" + str(index) + "/Label.csv"
-        output_gt_heatmap_path = GT_HEATMAP_PATH + "clip" + str(index) + "/"
+        frame_path = frame_label_path + "clip" + str(index) + "/"
+        label_path = frame_label_path + "clip" + str(index) + "/Label.csv"
+        output_gt_heatmap_path = gt_heatmap_path + "clip" + str(index) + "/"
         
         frames = glob.glob(frame_path + "*.jpg") + glob.glob(frame_path + "*.png") +  glob.glob(frame_path + "*.jpeg")
         
@@ -101,29 +101,37 @@ def visualize_random_frame_heatmap_box(num_clips, num_samples):
     sample_count = 0    
     
     while (sample_count != num_samples):
-      print("==== sample" + str(sample_count + 1) + " ====")
+        print("==== sample" + str(sample_count + 1) + " ====")
+        
+        clip_number = random.sample(range(1, num_clips + 1), 1)[0]
+        print("-clip number: " + str(clip_number))
     
-      clip_number = random.sample(range(1, num_clips + 1), 1)[0]
-      print("-clip number: " + str(clip_number))
-
-      frame_path = FRAME_LABEL_PATH + "clip" + str(clip_number) + "/"
-      gt_heatmap_path = GT_HEATMAP_PATH + "clip" + str(clip_number) + "/"   
-      
-      frames = glob.glob(frame_path + "*.jpg") + glob.glob(frame_path + "*.png") +  glob.glob(frame_path + "*.jpeg")
-      gt_heatmaps = glob.glob(gt_heatmap_path + "*.jpg") + glob.glob(gt_heatmap_path + "*.png") +  glob.glob(gt_heatmap_path + "*.jpeg")
-      num_frames = len(frames)  
-      
-      frames.sort()
-      gt_heatmaps.sort()    
-      
-      frame_number = random.sample(range(0, num_frames), 1)[0]
-      print("-frame number: " + str(frame_number))  
-      
-      sample_frame = cv2.imread(frames[frame_number])
-      sample_gt_heatmap = cv2.imread(gt_heatmaps[frame_number]) 
-      
-      visualize_frame_heatmap_box(sample_frame, sample_gt_heatmap)
-      sample_count += 1
+        frame_path = FRAME_LABEL_PATH + "clip" + str(clip_number) + "/"
+        gt_heatmap_path = GT_HEATMAP_PATH + "clip" + str(clip_number) + "/"   
+        label_path = FRAME_LABEL_PATH + "clip" + str(clip_number) + "/Label.csv" 
+        
+        frames = glob.glob(frame_path + "*.jpg") + glob.glob(frame_path + "*.png") +  glob.glob(frame_path + "*.jpeg")
+        gt_heatmaps = glob.glob(gt_heatmap_path + "*.jpg") + glob.glob(gt_heatmap_path + "*.png") +  glob.glob(gt_heatmap_path + "*.jpeg")
+        label_df = pd.read_csv(label_path)
+        num_frames = len(frames)  
+        
+        frames.sort()
+        gt_heatmaps.sort()    
+        
+        frame_number = random.sample(range(0, num_frames), 1)[0]
+        print("-frame number: " + str(frame_number))  
+        
+        visibility = label_df.iloc[frame_number][1]
+        status = label_df.iloc[frame_number][4]
+        print("-visibility: " + str(visibility))  
+        print("-status: " + str(status))  
+    
+        
+        sample_frame = cv2.imread(frames[frame_number])
+        sample_gt_heatmap = cv2.imread(gt_heatmaps[frame_number]) 
+        
+        visualize_frame_heatmap_box(sample_frame, sample_gt_heatmap)
+        sample_count += 1
     
 # %%
 # create_gt_heatmap(FRAME_LABEL_PATH, GT_HEATMAP_PATH)
