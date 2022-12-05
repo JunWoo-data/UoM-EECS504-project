@@ -16,8 +16,6 @@ import glob
 # %%
 def create_gt_heatmap(FRAME_LABEL_PATH, GT_HEATMAP_PATH):
     for index in range(1, NUM_CLIP + 1):
-        
-        
         frame_path = FRAME_LABEL_PATH + "clip" + str(index) + "/"
         label_path = FRAME_LABEL_PATH + "clip" + str(index) + "/Label.csv"
         output_gt_heatmap_path = GT_HEATMAP_PATH + "clip" + str(index) + "/"
@@ -131,3 +129,5 @@ def visualize_random_frame_heatmap_box(num_clips, num_samples):
 # create_gt_heatmap(FRAME_LABEL_PATH, GT_HEATMAP_PATH)
 # %%
 visualize_random_frame_heatmap_box(NUM_CLIP, 5)
+
+# %%
