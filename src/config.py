@@ -3,8 +3,9 @@ import torch
 
 # %%
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-WIDTH = 1280
-HEIGHT = 720
+IMAGE_CHANNELS = 3
+IMAGE_WIDTH = 1280
+IMAGE_HEIGHT = 720
 
 ## utils.py
 GAUSSIAN_KERNEL_SIZE = 20
