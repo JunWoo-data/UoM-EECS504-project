@@ -38,8 +38,6 @@ class TrackNetBlock(nn.Module):
             layers.append(nn.MaxPool2d(kernel_size = POOLING_KERNEL_SIZE, stride = POOLING_STRIDE))
         elif type == "decoder":
             layers.append(nn.Upsample(scale_factor = UPSAMPLING_FACTOR))
-        else:
-            print("type must be given 'encoder' or 'decoder'")
             
         self.block = nn.Sequential(*layers)
     
@@ -47,24 +45,35 @@ class TrackNetBlock(nn.Module):
         return self.block(x)
     
 # %%
-temp = TrackNetBlock(3, 64, 2, 3, 1, 1, "encoder")
+temp = TrackNetBlock(3, 64, 2, 3, 1, 1, type = "others")
 temp
 
 # %%
 class TrackNet(nn.Module):
-    def __init__(self, num_conv_list, out_channels, kernel_size, padding, stride):
+    def __init__(self, kernel_size, padding, stride):
         super().__init__() 
         
-        in_out_channels = out_channels.insert(0, IMAGE_CHANNELS)
-        
-        layers = []
-        for i in range(len(num_conv_list)):
-            layers.append(TrackNetBlock(in_channels = in_out_channels[j], out_channels = in_out_channels[j + 1],
-                                        num_conv = num_conv_list[i], kernel_size = kernel_size, padding = padding, stride = stride))
-        self.encoder = nn.Sequential(
-            TrackNetBlock()
+        self.encoder_layers = nn.Sequential(
+            TrackNetBlock(in_channels = 3, out_channels = 64, num_conv = 2, kernel_size = kernel_size, padding = padding, stride = stride, type = "encoder"),    
+            TrackNetBlock(in_channels = 64, out_channels = 128, num_conv = 2, kernel_size = kernel_size, padding = padding, stride = stride, type = "encoder"),
+            TrackNetBlock(in_channels = 128, out_channels = 256, num_conv = 3, kernel_size = kernel_size, padding = padding, stride = stride, type = "encoder")
         )
         
+        self.decoder_layers = nn.Sequential(
+            TrackNetBlock(in_channels = 256, out_channels = 512, num_conv = 3, kernel_size = kernel_size, padding = padding, stride = stride, type = "decoder"),    
+            TrackNetBlock(in_channels = 512, out_channels = 512, num_conv = 3, kernel_size = kernel_size, padding = padding, stride = stride, type = "decoder"),
+            TrackNetBlock(in_channels = 512, out_channels = 128, num_conv = 2, kernel_size = kernel_size, padding = padding, stride = stride, type = "decoder")
+        )
+        
+        self.last_layers = nn.Sequential(
+            TrackNetBlock(in_channels = 128, out_channels = 64, num_conv = 2, kernel_size = kernel_size, padding = padding, stride = stride, type = "ohter"),
+            TrackNetBlock(in_channels = 64, out_channels = 256, num_conv = 1, kernel_size = kernel_size, padding = padding, stride = stride, type = "ohter"),
+            nn.Softmax(dim = 1)
+        )  
+    
+    def forward(self, x):
+        
 # %%
-in_out_channels = [3, 64, 128, 256]
-for i in range(in_out_channels)
+TrackNet(3, 1, 1)
+
+# %%
