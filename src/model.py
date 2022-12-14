@@ -50,8 +50,9 @@ temp
 
 # %%
 class TrackNet(nn.Module):
-    def __init__(self, kernel_size, padding, stride):
+    def __init__(self, out_channels = 256, kernel_size = 3, padding = 1, stride = 1):
         super().__init__() 
+        self.out_channels = out_channels
         
         self.encoder_layers = nn.Sequential(
             TrackNetBlock(in_channels = 3, out_channels = 64, num_conv = 2, kernel_size = kernel_size, padding = padding, stride = stride, type = "encoder"),    
@@ -67,11 +68,27 @@ class TrackNet(nn.Module):
         
         self.last_layers = nn.Sequential(
             TrackNetBlock(in_channels = 128, out_channels = 64, num_conv = 2, kernel_size = kernel_size, padding = padding, stride = stride, type = "ohter"),
-            TrackNetBlock(in_channels = 64, out_channels = 256, num_conv = 1, kernel_size = kernel_size, padding = padding, stride = stride, type = "ohter"),
+            TrackNetBlock(in_channels = 64, out_channels = self.out_channels, num_conv = 1, kernel_size = kernel_size, padding = padding, stride = stride, type = "ohter"),
             nn.Softmax(dim = 1)
         )  
+        
+        self.init_weight()
     
     def forward(self, x):
+        batch_size = x.shape[0]
+        features = self.encoder_layers(x)
+        output = self.decoder_layers(features).reshape(batch_size, self.out_channels , -1)
+        
+        return output
+        
+    def init_weight(self):
+        for module in self.modules():
+            if isinstance(module, nn.Conv2d):
+                nn.init.uniform_(module.weight, -0.05, 0.05)
+                nn.init.constant_(module.bias, 0)
+            if isinstance(module, nn.BatchNorm2d):
+                nn.init.constant_(module.weight, 1)
+                nn.init.constant_(module.bias, 0)
         
 # %%
 TrackNet(3, 1, 1)
