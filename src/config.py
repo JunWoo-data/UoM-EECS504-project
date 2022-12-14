@@ -4,6 +4,9 @@ import torch
 # %%
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 IMAGE_CHANNELS = 3
+POOLING_KERNEL_SIZE = 2
+POOLING_STRIDE = 2
+UPSAMPLING_FACTOR = 2
 IMAGE_WIDTH = 1280
 IMAGE_HEIGHT = 720
 
