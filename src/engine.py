@@ -1,11 +1,15 @@
 # %%
+import torch
 from tqdm.auto import tqdm
-from datasets import train_loader, test_loader, train_dataset, test_dataset, BallDatasets
-from datasets_prepare import visualize_frame_heatmap_box
-from config import DEVICE, DATA_PATH
+from datasets import train_loader, test_loader
+from config import DEVICE
 
+from config import DATA_PATH
+from datasets_prepare import visualize_frame_heatmap_box
+from datasets import train_dataset, test_dataset, BallDatasets
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
+import numpy as np
 import cv2
 from google.colab.patches import cv2_imshow
 import matplotlib.pyplot as plt
@@ -17,8 +21,8 @@ from config import GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE
 
 # %%
 train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
-temp_csv = train_csv.iloc[:4]
-
+temp_csv = train_csv.iloc[1:3]
+temp_csv = temp_csv.reset_index()[["frame_i", "frame_im1", "frame_im2", "annotation"]]
 temp_dataset = BallDatasets(temp_csv, 640, 360)
 temp_loader = DataLoader(
     temp_dataset,
@@ -27,108 +31,109 @@ temp_loader = DataLoader(
     num_workers = 0
 )
 
-# %%
-temp_img = cv2.imread(temp_csv.iloc[2][0])
-cv2_imshow(temp_img)
 
 # %%
-temp_annot = cv2.imread(temp_csv.iloc[2][3])
-cv2_imshow(temp_annot)
+# temp_img = cv2.imread(temp_csv.iloc[2][0])
+# cv2_imshow(temp_img)
 
-# %% 
-print(temp_csv.iloc[2][0])
-print(temp_csv.iloc[2][3])
+# # %%
+# temp_annot = cv2.imread(temp_csv.iloc[2][3])
+# cv2_imshow(temp_annot)
 
-# %%
-visualize_frame_heatmap_box(temp_img, temp_annot)
+# # %% 
+# print(temp_csv.iloc[2][0])
+# print(temp_csv.iloc[2][3])
 
-# %%
-img = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip61/0171.jpg")
-ant = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip61/0171.png")
-cv2_imshow(img)
-cv2_imshow(ant)
-visualize_frame_heatmap_box(img, ant)
+# # %%
+# visualize_frame_heatmap_box(temp_img, temp_annot)
 
-# %%
-img00 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip1/0000.jpg")
-ant00 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip1/0000.png")
-cv2_imshow(img00)
-cv2_imshow(ant00)
-visualize_frame_heatmap_box(img00, ant00)
+# # %%
+# img = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip17/0020.jpg")
+# ant = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip17/0020.png")
+# cv2_imshow(img)
+# cv2_imshow(ant)
+# visualize_frame_heatmap_box(img, ant)
+
+# # %%
+# img00 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip1/0000.jpg")
+# ant00 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip1/0000.png")
+# cv2_imshow(img00)
+# cv2_imshow(ant00)
+# visualize_frame_heatmap_box(img00, ant00)
 
 
-# %%
+# # %%
 
 
-# %%
-y = 423
-x = 599
-xmin = x - 5
-ymin = y - 5
-xmax = x + 5
-ymax = y + 5
+# # %%
+# y = 423
+# x = 599
+# xmin = x - 5
+# ymin = y - 5
+# xmax = x + 5
+# ymax = y + 5
 
-xy = (int(xmin), int(ymin))
-height = int(ymax - ymin)
-width = int(xmax - xmin)    
+# xy = (int(xmin), int(ymin))
+# height = int(ymax - ymin)
+# width = int(xmax - xmin)    
 
-fig, ax = plt.subplots(figsize = (15, 10))
-ax.imshow(ant00)
+# fig, ax = plt.subplots(figsize = (15, 10))
+# ax.imshow(ant00)
 
-rect = patches.Rectangle(xy, width, height, linewidth = 2, edgecolor = 'r', facecolor = 'none')
-ax.add_patch(rect)
+# rect = patches.Rectangle(xy, width, height, linewidth = 2, edgecolor = 'r', facecolor = 'none')
+# ax.add_patch(rect)
 
-plt.show()
+# plt.show()
 
-# %%
-x = 1095
-y = 435 
-xmin = x - 5
-ymin = y - 5
-xmax = x + 5
-ymax = y + 5
+# # %%
+# x = 1095
+# y = 435 
+# xmin = x - 5
+# ymin = y - 5
+# xmax = x + 5
+# ymax = y + 5
 
-xy = (int(xmin), int(ymin))
-height = int(ymax - ymin)
-width = int(xmax - xmin)    
+# xy = (int(xmin), int(ymin))
+# height = int(ymax - ymin)
+# width = int(xmax - xmin)    
 
-#create a black image
-heatmap = Image.new("RGB", (1280, 720))
-pix = heatmap.load()
-for i in range(1280):
-    for j in range(720):
-            pix[i,j] = (0, 0, 0)
-#copy the heatmap on it
-gaussian_kernel_array = gaussian_kernel(GAUSSIAN_KERNEL_VARIANCE)   
+# #create a black image
+# heatmap = Image.new("RGB", (1280, 720))
+# pix = heatmap.load()
+# for i in range(1280):
+#     for j in range(720):
+#             pix[i,j] = (0, 0, 0)
+# #copy the heatmap on it
+# gaussian_kernel_array = gaussian_kernel(GAUSSIAN_KERNEL_VARIANCE)   
 
-for i in range(-GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE + 1):
-    for j in range(-GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE + 1):
-        if (x + i < 1280) and (x + i >= 0) and (y + j < 720) and (y + j >= 0):
-            kernel_element = gaussian_kernel_array[j + GAUSSIAN_KERNEL_SIZE][i + GAUSSIAN_KERNEL_SIZE]
-            if kernel_element > 0:
-                pix[x + i, y + j] = (kernel_element,kernel_element,kernel_element)
+# for i in range(-GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE + 1):
+#     for j in range(-GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE + 1):
+#         if (x + i < 1280) and (x + i >= 0) and (y + j < 720) and (y + j >= 0):
+#             kernel_element = gaussian_kernel_array[j + GAUSSIAN_KERNEL_SIZE][i + GAUSSIAN_KERNEL_SIZE]
+#             if kernel_element > 0:
+#                 pix[x + i, y + j] = (kernel_element,kernel_element,kernel_element)
 
-# %%
-fig, ax = plt.subplots(figsize = (15, 10))
-ax.imshow(heatmap)
+# # %%
+# fig, ax = plt.subplots(figsize = (15, 10))
+# ax.imshow(heatmap)
 
-rect = patches.Rectangle(xy, width, height, linewidth = 2, edgecolor = 'r', facecolor = 'none')
-ax.add_patch(rect)
+# rect = patches.Rectangle(xy, width, height, linewidth = 2, edgecolor = 'r', facecolor = 'none')
+# ax.add_patch(rect)
 
-# %%
-img28 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip1/0028.jpg")
-ant28 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip1/0028.png")
-cv2_imshow(img28)
-cv2_imshow(ant28)
-visualize_frame_heatmap_box(img28, ant28)
+# # %%
+# img28 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip1/0028.jpg")
+# ant28 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip1/0028.png")
+# cv2_imshow(img28)
+# cv2_imshow(ant28)
+# visualize_frame_heatmap_box(img28, ant28)
 
-# %%
-# %%
-img29 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip1/0029.jpg")
-ant29 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip1/0029.png")
-cv2_imshow(img29)
-cv2_imshow(ant29)
-visualize_frame_heatmap_box(img29, ant29)
+# # %%
+# # %%
+# img29 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip1/0029.jpg")
+# ant29 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip1/0029.png")
+# cv2_imshow(img29)
+# cv2_imshow(ant29)
+# visualize_frame_heatmap_box(img29, ant29)
 
 
 # %%
@@ -143,26 +148,44 @@ def train(train_loader, model, input_sequence = 1):
     for i, data in enumerate(prog_bar):
         #optimizer.zero_grad()
         
-        frames, annotation = data
+        frames_batch, annotations_batch = data
         
         if input_sequence == 1:
-            input_frames = frames[0]
+            frames_batch = [frames_batch[0]]
         
-        for i in range(len(input_frames)):
-            visualize_frame_heatmap_box(input_frames[i].transpose(2, 0) / 255, annotation[i].transpose(2, 0) / 255)
-            
-        frames = [frame.to(DEVICE) for frame in frames]
-        annotation = annotation.to(DEVICE)
+        # TODO: delete
+        for i in range(len(frames_batch)):
+            visualize_frame_heatmap_box(frames_batch[i].transpose(2, 0) / 255, annotations_batch[i].transpose(2, 0) / 255)
         
-        print(frames[0].shape)
-        print(frames[1].shape)
-        print(annotation.shape)
+        frames_batch = np.concatenate(frames_batch, axis = 0) 
+        
+        frames_batch = torch.tensor(frames_batch).to(DEVICE)
+        annotation = torch.tensor(annotation).to(DEVICE)
+        
+        
         
 # %%
 train(temp_loader, "temp")
 # %%
+temp_csv
+# %%
+frames, annotations = next(iter(temp_loader))
 
-frames, annotations = next(iter(train_loader_2))
+# %%
+print(len(frames))
+print(len(annotations))
+
+# %%
+frames = [frames[0]]
+
+# %%
+frames.shape
+# %%
+check = np.concatenate(frames, axis = 0)
+check.shape
+
+# %%
+torch.tensor(check).to(DEVICE)
 
 # %%
 len(frame)
