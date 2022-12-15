@@ -299,11 +299,11 @@ test_loader = DataLoader(
 print(f"Number of training samples: {len(train_dataset)}")
 print(f"Number of validation samples: {len(test_dataset)}\n")
 # %%
-temp, _ = train_dataset[13397]
-# %%
-temp[0].shape
-# %%
-train_dataset.visualize_sample(13397)
-# %%
-temp[0]
+# temp, _ = train_dataset[13397]
+# # %%
+# temp[0].shape
+# # %%
+# train_dataset.visualize_sample(13397)
+# # %%
+# temp[0]
 # %%
