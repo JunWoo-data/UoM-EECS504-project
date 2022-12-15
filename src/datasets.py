@@ -35,6 +35,8 @@ class BallDatasets(Dataset):
         
         annotation = cv2.imread(self.csv_file.loc[self.csv_file.index  == idx, "annotation"].values[0])
         annotation = cv2.resize(annotation, (self.width_resize, self.height_resize))
+        annotation = annotation.astype(np.float32)
+        annotation = annotation.transpose([2, 1, 0])
         
         return frames, annotation
     
@@ -43,7 +45,7 @@ class BallDatasets(Dataset):
     
     def visualize_sample(self, idx):
         sample_frames, sample_annotation = self.__getitem__(idx)
-        visualize_frame_heatmap_box(sample_frames[0].transpose([2, 1, 0]) / 255, sample_annotation)
+        visualize_frame_heatmap_box(sample_frames[0].transpose([2, 1, 0]) / 255, sample_annotation.transpose([2, 1, 0]))
         
 # %%
 train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
