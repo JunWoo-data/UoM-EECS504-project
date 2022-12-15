@@ -16,14 +16,13 @@ class BallDatasets(Dataset):
         self.height_resize = height_resize
         
     def __getitem__(self, idx):
-        frame_i = cv2.imread(self.csv_file.loc[self.csv_file.index == idx, "frame_i"][0])
-        frame_im1 = cv2.imread(self.csv_file.loc[self.csv_file.index == idx, "frame_im1"][0])
-        frame_im2 = cv2.imread(self.csv_file.loc[self.csv_file.index == idx, "frame_im2"][0])
+        frame_i = cv2.imread(self.csv_file.loc[self.csv_file.index == idx, "frame_i"].values[0])
+        frame_im1 = cv2.imread(self.csv_file.loc[self.csv_file.index == idx, "frame_im1"].values[0])
+        frame_im2 = cv2.imread(self.csv_file.loc[self.csv_file.index == idx, "frame_im2"].values[0])
         
         frame_i = cv2.resize(frame_i, (self.width_resize, self.height_resize))
         frame_im1 = cv2.resize(frame_im1, (self.width_resize, self.height_resize))
         frame_im2 = cv2.resize(frame_im2, (self.width_resize, self.height_resize))
-        
         
         frame_i = frame_i.astype(np.float32)
         frame_im1 = frame_im1.astype(np.float32)
@@ -34,7 +33,7 @@ class BallDatasets(Dataset):
         frame_im2 = frame_im2.transpose([2, 1, 0])
         frames = [frame_i, frame_im1, frame_im2]
         
-        annotation = cv2.imread(train_csv.loc[train_csv["index"] == idx, "annotation"][0])
+        annotation = cv2.imread(self.csv_file.loc[self.csv_file.index  == idx, "annotation"].values[0])
         annotation = cv2.resize(annotation, (self.width_resize, self.height_resize))
         
         return frames, annotation
@@ -74,3 +73,11 @@ print(f"Number of training samples: {len(train_dataset)}")
 print(f"Number of validation samples: {len(test_dataset)}\n")
 
 # %%
+# for idx, (image, annot) in enumerate(train_dataset):
+#     print("idx: ", idx)
+
+# %%
+# train_dataset[0]
+# # %%
+# train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
+# train_csv
