@@ -18,9 +18,3 @@ def gaussian_kernel(variance):
     gaussian_kernel_array = gaussian_kernel_array.astype(int)
 
     return gaussian_kernel_array
-# %%
-# show heatmap 
-# gaussian_kernel_array = gaussian_kernel(GAUSSIAN_KERNEL_VARIANCE)
-# plt.imshow(gaussian_kernel_array, cmap = plt.get_cmap('gray'), interpolation = 'nearest')
-# plt.colorbar()
-# plt.show()
