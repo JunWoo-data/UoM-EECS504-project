@@ -79,7 +79,9 @@ print(f"Number of validation samples: {len(test_dataset)}\n")
 #     print("idx: ", idx)
 
 # %%
-# train_dataset[0]
+# frame, annotation = train_dataset[0]
+# frame[0]
+# %%
 # # %%
 # train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
 # train_csv
