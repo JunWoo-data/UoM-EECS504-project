@@ -219,10 +219,10 @@ def create_train_test_csv(train_frames_ratio):
     return train_frames, test_frames
 
 # %%
-create_gt_heatmap()
+# create_gt_heatmap()
 
 # %%
-visualize_random_frame_heatmap_box(5)
+# visualize_random_frame_heatmap_box(5)
 
 # %%
 #train_frames, test_frames = create_train_test_csv(0.7)
