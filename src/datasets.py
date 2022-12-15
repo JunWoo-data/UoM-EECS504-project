@@ -1,5 +1,5 @@
 # %%
-from config import WIDTH, HEIGHT, NUM_CLIP, GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE, DATA_PATH, FRAME_LABEL_PATH, GT_HEATMAP_PATH
+from config import WIDTH_ORIGINAL, HEIGHT_ORIGINAL, WIDTH_RESIZE, HEIGHT_RESIZE, NUM_CLIP, GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE, DATA_PATH, FRAME_LABEL_PATH, GT_HEATMAP_PATH
 from utils import gaussian_kernel
 import os, sys
 import pandas as pd
@@ -41,10 +41,10 @@ def create_gt_heatmap():
             file_name = label_df.iloc[ri, 0]
 
             if visibility == 0:
-                heatmap = Image.new("RGB", (WIDTH, HEIGHT))
+                heatmap = Image.new("RGB", (WIDTH_ORIGINAL, HEIGHT_ORIGINAL))
                 pix = heatmap.load()
-                for i in range(WIDTH):
-                    for j in range(HEIGHT):
+                for i in range(WIDTH_ORIGINAL):
+                    for j in range(HEIGHT_ORIGINAL):
                             pix[i,j] = (0,0,0)
 
             else:
@@ -52,10 +52,10 @@ def create_gt_heatmap():
                 y = int(label_df.iloc[ri][3])   
                 
                 #create a black image
-                heatmap = Image.new("RGB", (WIDTH, HEIGHT))
+                heatmap = Image.new("RGB", (WIDTH_ORIGINAL, HEIGHT_ORIGINAL))
                 pix = heatmap.load()
-                for i in range(WIDTH):
-                    for j in range(HEIGHT):
+                for i in range(WIDTH_ORIGINAL):
+                    for j in range(HEIGHT_ORIGINAL):
                             pix[i,j] = (0,0,0)
 
                 #copy the heatmap on it
@@ -63,7 +63,7 @@ def create_gt_heatmap():
                 
                 for i in range(-GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE + 1):
                     for j in range(-GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE + 1):
-                        if x + i < WIDTH and x + i >= 0 and y + j < HEIGHT and y + j >= 0:
+                        if x + i < WIDTH_ORIGINAL and x + i >= 0 and y + j < HEIGHT_ORIGINAL and y + j >= 0:
                             kernel_element = gaussian_kernel_array[i + GAUSSIAN_KERNEL_SIZE][j + GAUSSIAN_KERNEL_SIZE]
                             if kernel_element > 0:
                                 pix[x + i, y + j] = (kernel_element,kernel_element,kernel_element)
@@ -206,16 +206,21 @@ def create_train_test_csv(train_frames_ratio):
     random.shuffle(test_frame_index)
     
     train_frames = all_frames.iloc[train_frame_index]
-    test_frames = all_frames.iloc[test_frame_index]
+    train_frames["index"] = train_frame_index
+    train_frames = train_frames[["index", "frame_i", "frame_im1", "frame_im2", "annotation"]]
     
-    train_frames.to_csv(DATA_PATH + "train_frames.csv")
+    test_frames = all_frames.iloc[test_frame_index]
+    test_frames["index"] = test_frame_index
+    test_frames = test_frames[["index", "frame_i", "frame_im1", "frame_im2", "annotation"]]
+    
+    train_frames.to_csv(DATA_PATH + "train_frames.csv", index = False)
     print("== Train frames saved:")
     print("- save path: " + DATA_PATH + "train_frames.csv")
     print("- file name: train_frames.csv")
     print("- size: " + str(train_frames.shape))
     print(" ")
     
-    test_frames.to_csv(DATA_PATH + "test_frames.csv")
+    test_frames.to_csv(DATA_PATH + "test_frames.csv", index = False)
     print("== Test frames saved:")
     print("- save path: " + DATA_PATH + "test_frames.csv")
     print("- file name: test_frames.csv")
@@ -224,15 +229,65 @@ def create_train_test_csv(train_frames_ratio):
     return train_frames, test_frames
 # %%
 train_frames, test_frames = create_train_test_csv(0.7)
+
 # %%
 from torch.utils.data import Dataset, DataLoader
 
-
-# %%
-pd.read_csv(DATA_PATH + "train_csv")
-
 # %%
 class BallDatasets(Dataset):
-    def __init__(self, csv_file):
+    def __init__(self, csv_file, width_resize, height_resize):
         self.csv_file = csv_file
+        self.width_resize = width_resize
+        self.height_resize = height_resize
         
+    def __getitem__(self, idx):
+        frame_i = cv2.imread(train_csv.loc[train_csv["index"] == idx, "frame_i"][0])
+        frame_im1 = cv2.imread(train_csv.loc[train_csv["index"] == idx, "frame_im1"][0])
+        frame_im2 = cv2.imread(train_csv.loc[train_csv["index"] == idx, "frame_im2"][0])
+        
+        frame_i = cv2.resize(frame_i, (self.width_resize, self.height_resize))
+        frame_im1 = cv2.resize(frame_im1, (self.width_resize, self.height_resize))
+        frame_im2 = cv2.resize(frame_im2, (self.width_resize, self.height_resize))
+        
+        frames = [frame_i, frame_im1, frame_im2]
+        
+        annotation = cv2.imread(train_csv.loc[train_csv["index"] == idx, "annotation"][0])
+        annotation = cv2.resize(annotation, (self.width_resize, self.height_resize))
+        
+        return frames, annotation
+    
+    def __len__(self):
+        return self.csv_file.shape[0]
+    
+    def visualize_sample(self, idx):
+        sample_frames, sample_annotation = self.__getitem__(idx)
+        visualize_frame_heatmap_box(sample_frames[0], sample_annotation)
+        
+# %%
+train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
+test_csv = pd.read_csv(DATA_PATH + "test_frames.csv")
+        
+# %%
+train_dataset = BallDatasets(train_csv, WIDTH_RESIZE, HEIGHT_RESIZE)
+test_dataset = BallDatasets(test_csv, WIDTH_RESIZE, HEIGHT_RESIZE)
+
+# %%
+train_loader = DataLoader(
+    train_dataset,
+    batch_size = 3,
+    shuffle = True,
+    num_workers = 0
+)
+
+test_loader = DataLoader(
+    test_dataset,
+    batch_size = 3,
+    shuffle = True,
+    num_workers = 0
+)
+
+
+# %%
+print(f"Number of training samples: {len(train_dataset)}")
+print(f"Number of validation samples: {len(test_dataset)}\n")
+# %%
