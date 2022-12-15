@@ -63,7 +63,7 @@ def create_gt_heatmap():
                 
                 for i in range(-GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE + 1):
                     for j in range(-GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE + 1):
-                        if x + i < WIDTH_ORIGINAL and x + i >= 0 and y + j < HEIGHT_ORIGINAL and y + j >= 0:
+                        if (x + i < WIDTH_ORIGINAL) and (x + i >= 0) and (y + j < HEIGHT_ORIGINAL) and (y + j >= 0):
                             kernel_element = gaussian_kernel_array[i + GAUSSIAN_KERNEL_SIZE][j + GAUSSIAN_KERNEL_SIZE]
                             if kernel_element > 0:
                                 pix[x + i, y + j] = (kernel_element,kernel_element,kernel_element)
@@ -219,4 +219,12 @@ def create_train_test_csv(train_frames_ratio):
     return train_frames, test_frames
 
 # %%
+create_gt_heatmap()
+
+# %%
+visualize_random_frame_heatmap_box(5)
+
+# %%
 #train_frames, test_frames = create_train_test_csv(0.7)
+
+# %%
