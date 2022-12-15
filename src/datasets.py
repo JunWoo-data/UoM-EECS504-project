@@ -249,6 +249,14 @@ class BallDatasets(Dataset):
         frame_im1 = cv2.resize(frame_im1, (self.width_resize, self.height_resize))
         frame_im2 = cv2.resize(frame_im2, (self.width_resize, self.height_resize))
         
+        
+        frame_i = frame_i.astype(np.float32)
+        frame_im1 = frame_im1.astype(np.float32)
+        frame_im2 = frame_im2.astype(np.float32)
+        
+        frame_i = frame_i.transpose([2, 1, 0])
+        frame_im1 = frame_im1.transpose([2, 1, 0])
+        frame_im2 = frame_im2.transpose([2, 1, 0])
         frames = [frame_i, frame_im1, frame_im2]
         
         annotation = cv2.imread(train_csv.loc[train_csv["index"] == idx, "annotation"][0])
@@ -261,7 +269,7 @@ class BallDatasets(Dataset):
     
     def visualize_sample(self, idx):
         sample_frames, sample_annotation = self.__getitem__(idx)
-        visualize_frame_heatmap_box(sample_frames[0], sample_annotation)
+        visualize_frame_heatmap_box(sample_frames[0].transpose([2, 1, 0]) / 255, sample_annotation)
         
 # %%
 train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
@@ -290,4 +298,12 @@ test_loader = DataLoader(
 # %%
 print(f"Number of training samples: {len(train_dataset)}")
 print(f"Number of validation samples: {len(test_dataset)}\n")
+# %%
+temp, _ = train_dataset[13397]
+# %%
+temp[0].shape
+# %%
+train_dataset.visualize_sample(13397)
+# %%
+temp[0]
 # %%
