@@ -16,9 +16,9 @@ class BallDatasets(Dataset):
         self.height_resize = height_resize
         
     def __getitem__(self, idx):
-        frame_i = cv2.imread(train_csv.loc[train_csv["index"] == idx, "frame_i"][0])
-        frame_im1 = cv2.imread(train_csv.loc[train_csv["index"] == idx, "frame_im1"][0])
-        frame_im2 = cv2.imread(train_csv.loc[train_csv["index"] == idx, "frame_im2"][0])
+        frame_i = cv2.imread(self.csv_file.loc[self.csv_file.index == idx, "frame_i"][0])
+        frame_im1 = cv2.imread(self.csv_file.loc[self.csv_file.index == idx, "frame_im1"][0])
+        frame_im2 = cv2.imread(self.csv_file.loc[self.csv_file.index == idx, "frame_im2"][0])
         
         frame_i = cv2.resize(frame_i, (self.width_resize, self.height_resize))
         frame_im1 = cv2.resize(frame_im1, (self.width_resize, self.height_resize))
@@ -69,7 +69,8 @@ test_loader = DataLoader(
     num_workers = 0
 )
 
-
 # %%
 print(f"Number of training samples: {len(train_dataset)}")
 print(f"Number of validation samples: {len(test_dataset)}\n")
+
+# %%

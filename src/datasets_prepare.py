@@ -1,3 +1,4 @@
+# %%
 from config import WIDTH_ORIGINAL, HEIGHT_ORIGINAL, NUM_CLIP, GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE, DATA_PATH, FRAME_LABEL_PATH, GT_HEATMAP_PATH
 from utils import gaussian_kernel
 import os, sys
@@ -200,13 +201,8 @@ def create_train_test_csv(train_frames_ratio):
     random.shuffle(test_frame_index)
     
     train_frames = all_frames.iloc[train_frame_index]
-    train_frames["index"] = train_frame_index
-    train_frames = train_frames[["index", "frame_i", "frame_im1", "frame_im2", "annotation"]]
-    
     test_frames = all_frames.iloc[test_frame_index]
-    test_frames["index"] = test_frame_index
-    test_frames = test_frames[["index", "frame_i", "frame_im1", "frame_im2", "annotation"]]
-    
+
     train_frames.to_csv(DATA_PATH + "train_frames.csv", index = False)
     print("== Train frames saved:")
     print("- save path: " + DATA_PATH + "train_frames.csv")
@@ -221,3 +217,6 @@ def create_train_test_csv(train_frames_ratio):
     print("- size: " + str(test_frames.shape))
     
     return train_frames, test_frames
+
+# %%
+#train_frames, test_frames = create_train_test_csv(0.7)
