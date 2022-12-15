@@ -225,3 +225,14 @@ def create_train_test_csv(train_frames_ratio):
 # %%
 train_frames, test_frames = create_train_test_csv(0.7)
 # %%
+from torch.utils.data import Dataset, DataLoader
+
+
+# %%
+pd.read_csv(DATA_PATH + "train_csv")
+
+# %%
+class BallDatasets(Dataset):
+    def __init__(self, csv_file):
+        self.csv_file = csv_file
+        

@@ -18,7 +18,6 @@ for i in range(num_conv):
     
 
 # %%
-
 class TrackNetBlock(nn.Module):
     def __init__(self, in_channels, out_channels, num_conv, kernel_size, padding, stride, type):
         super().__init__()
@@ -50,12 +49,12 @@ temp
 
 # %%
 class TrackNet(nn.Module):
-    def __init__(self, out_channels = 256, kernel_size = 3, padding = 1, stride = 1):
+    def __init__(self, in_channels, out_channels = 256, kernel_size = 3, padding = 1, stride = 1):
         super().__init__() 
         self.out_channels = out_channels
         
         self.encoder_layers = nn.Sequential(
-            TrackNetBlock(in_channels = 3, out_channels = 64, num_conv = 2, kernel_size = kernel_size, padding = padding, stride = stride, type = "encoder"),    
+            TrackNetBlock(in_channels = in_channels, out_channels = 64, num_conv = 2, kernel_size = kernel_size, padding = padding, stride = stride, type = "encoder"),    
             TrackNetBlock(in_channels = 64, out_channels = 128, num_conv = 2, kernel_size = kernel_size, padding = padding, stride = stride, type = "encoder"),
             TrackNetBlock(in_channels = 128, out_channels = 256, num_conv = 3, kernel_size = kernel_size, padding = padding, stride = stride, type = "encoder")
         )
@@ -77,7 +76,10 @@ class TrackNet(nn.Module):
     def forward(self, x):
         batch_size = x.shape[0]
         features = self.encoder_layers(x)
-        output = self.decoder_layers(features).reshape(batch_size, self.out_channels , -1)
+        output = self.last_layers(self.decoder_layers(features))
+        print(output.shape)
+        output = output.reshape(batch_size, self.out_channels , -1)
+        print(output.shape)
         
         return output
         
@@ -91,6 +93,10 @@ class TrackNet(nn.Module):
                 nn.init.constant_(module.bias, 0)
         
 # %%
-TrackNet(3, 1, 1)
+temp = TrackNet(3, 256, 3, 1, 1)
+temp_data = torch.randn(2, 3, 640, 360)
+res = temp(temp_data)
 
+# %%
+res.shape
 # %%
