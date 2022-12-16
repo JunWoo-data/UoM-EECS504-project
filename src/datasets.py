@@ -72,17 +72,17 @@ class BallDatasets(Dataset):
         sample_annotation = sample["annotation"]
         visualize_frame_heatmap_box(sample_frames[0].transpose([2, 1, 0]) / 255, sample_annotation.transpose([2, 1, 0]))
         
-# %%
-train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
-test_csv = pd.read_csv(DATA_PATH + "test_frames.csv")
+# # %%
+# train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
+# test_csv = pd.read_csv(DATA_PATH + "test_frames.csv")
         
-# %%
-train_dataset = BallDatasets(train_csv, WIDTH_RESIZE, HEIGHT_RESIZE, 256)
-test_dataset = BallDatasets(test_csv, WIDTH_RESIZE, HEIGHT_RESIZE, 256)
+# # %%
+# train_dataset = BallDatasets(train_csv, WIDTH_RESIZE, HEIGHT_RESIZE, 256)
+# test_dataset = BallDatasets(test_csv, WIDTH_RESIZE, HEIGHT_RESIZE, 256)
 
-# %%
-temp = train_dataset[0]
-temp["annotation"].shape
+# # %%
+# temp = train_dataset[0]
+# temp["annotation"].shape
 
 
 # # %%
