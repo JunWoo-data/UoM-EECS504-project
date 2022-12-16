@@ -182,10 +182,7 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
         num_workers = 0
     )
     
-    prog_bar = tqdm(train_loader, total = len(train_loader))
-    
-    print("Training.........")
-    
+
     for epoch in range(epochs_num):
         start_time = time.time()
         for phase in ["train", "val"]:
@@ -199,6 +196,7 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
                 steps_per_epoch = 200 / batch_size 
     
             print(f"Starting Epoch {epoch + 1} Phase {phase}")
+            
             running_loss = 0.0
             running_acc = 0.0
             running_no_zero_acc = 0.0
@@ -211,6 +209,7 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
             total_success = 0
             total_fail = 0
 
+            prog_bar = tqdm(train_loader, total = len(data_loader))
             for i, data in enumerate(prog_bar):
                 frames_batch = data["frames"]
                 annotations_batch = data["annotation"]
@@ -350,7 +349,7 @@ model = TrackNet(in_channels = 9)
 
        
 # %%
-train(model, temp_csv, test_csv, batch_size = 1, epochs_num = 1, lr = 1.0, num_classes = 256, input_sequence = 3)
+train(model, train_csv, test_csv, batch_size = 1, epochs_num = 1, lr = 1.0, num_classes = 256, input_sequence = 3)
 # %%
 temp_csv
 
