@@ -101,3 +101,25 @@ def get_center_ball_dist(output, x_true, y_true, num_classes=256):
                     fail += 1
 
     return dists, success, fail
+
+# %%
+def show_result(inputs, labels, outputs):
+    """
+    Display network`s predictions results
+    """
+    num_classes = outputs.size(1)
+    outputs = outputs.argmax(dim=1).detach().cpu().numpy()
+    if num_classes == 2:
+        outputs *= 255
+    mask = outputs[0].reshape((360, 640))
+    fig, ax = plt.subplots(1, 2, figsize=(20, 1 * 5))
+    ax[0].imshow(inputs[0, :3, :, ].detach().cpu().numpy().transpose((1, 2, 0)))
+    ax[0].set_title('Image')
+    ax[1].imshow(labels[0].detach().cpu().numpy().reshape((360, 640)), cmap='gray')
+    ax[1].set_title('gt')
+    plt.show()
+    plt.figure()
+    plt.imshow(mask, cmap='gray')
+    plt.title('Pred')
+    plt.show()
+    
