@@ -4,19 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F 
 from config import IMAGE_CHANNELS, POOLING_KERNEL_SIZE, POOLING_STRIDE, UPSAMPLING_FACTOR
 
-
-# %%
-temp = nn.Conv2d(in_channels = 3, out_channels = 64, kernel_size = 3, padding = 1, stride = 1)
-
-temp_data = torch.randn(3, 640, 360)
-temp(temp_data).shape
-
-# %%
-num_conv = 2
-conv_layers = []
-for i in range(num_conv):
-    
-
 # %%
 class TrackNetBlock(nn.Module):
     def __init__(self, in_channels, out_channels, num_conv, kernel_size, padding, stride, type):
@@ -43,10 +30,6 @@ class TrackNetBlock(nn.Module):
     def forward(self, x):
         return self.block(x)
     
-# %%
-temp = TrackNetBlock(3, 64, 2, 3, 1, 1, type = "others")
-temp
-
 # %%
 class TrackNet(nn.Module):
     def __init__(self, in_channels, out_channels = 256, kernel_size = 3, padding = 1, stride = 1):
@@ -92,11 +75,3 @@ class TrackNet(nn.Module):
                 nn.init.constant_(module.weight, 1)
                 nn.init.constant_(module.bias, 0)
         
-# %%
-temp = TrackNet(3, 256, 3, 1, 1)
-temp_data = torch.randn(2, 3, 640, 360)
-res = temp(temp_data)
-
-# %%
-res.shape
-# %%
