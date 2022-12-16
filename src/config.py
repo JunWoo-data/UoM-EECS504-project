@@ -22,3 +22,7 @@ NUM_CLIP = 95
 DATA_PATH = "/content/drive/My Drive/eecs504/project/data/"
 FRAME_LABEL_PATH = "/content/drive/My Drive/eecs504/project/data/dataset/frame_label/"
 GT_HEATMAP_PATH = "/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/"
+
+## engine.py
+SAVED_STATE_PATH = "/content/drive/My Drive/eecs504/project/saved_states/"
+OUTPUT_PATH = '/content/drive/My Drive/eecs504/project/output/'
