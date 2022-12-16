@@ -2,6 +2,7 @@
 from config import GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
 
 
 
