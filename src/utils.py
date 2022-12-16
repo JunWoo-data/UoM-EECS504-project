@@ -122,4 +122,12 @@ def show_result(inputs, labels, outputs):
     plt.imshow(mask, cmap='gray')
     plt.title('Pred')
     plt.show()
-    
+
+# %%
+def plot_graph(train_data, valid_data, data_type, destination):
+    plt.figure(figsize=(10, 8))
+    plt.plot(train_data, label=f'Train {data_type}')
+    plt.plot(valid_data, label=f'Valid {data_type}')
+    plt.legend()
+    plt.savefig(destination)
+    plt.show()
