@@ -8,10 +8,12 @@ import cv2
 from google.colab.patches import cv2_imshow
 from torch.utils.data import Dataset, DataLoader
 
+
 # %%
 class BallDatasets(Dataset):
-    def __init__(self, csv_file, width_resize, height_resize):
+    def __init__(self, csv_file, width_resize, height_resize, num_classes):
         self.csv_file = csv_file
+        self.num_classes = num_classes
         self.width_resize = width_resize
         self.height_resize = height_resize
         
@@ -33,10 +35,21 @@ class BallDatasets(Dataset):
         frame_im2 = frame_im2.transpose([2, 1, 0])
         frames = [frame_i, frame_im1, frame_im2]
         
+        seg_labels = np.zeros((self.height_resize, self.width_resize, self.num_classes))
         annotation = cv2.imread(self.csv_file.loc[self.csv_file.index  == idx, "annotation"].values[0])
         annotation = cv2.resize(annotation, (self.width_resize, self.height_resize))
-        annotation = annotation.astype(np.float32)
-        annotation = annotation.transpose([2, 1, 0])
+        annotation = annotation[:, :, 0]
+        
+        for c in range(self.num_classes):
+            seg_labels[:, :, c] = (annotation == c).astype(int)
+            
+        seg_labels = np.reshape(seg_labels, (self.width_resize * self.height_resize, self.num_classes))
+        seg_labels = seg_labels.transpose([1, 0].argmax(0))
+
+        # annotation = cv2.imread(self.csv_file.loc[self.csv_file.index  == idx, "annotation"].values[0])
+        # annotation = cv2.resize(annotation, (self.width_resize, self.height_resize))
+        # annotation = annotation.astype(np.float32)
+        # annotation = annotation.transpose([2, 1, 0])
         
         frame_i_path = self.csv_file.loc[self.csv_file.index == idx, "frame_i"].values[0]
         clip_number, frame_number = frame_i_path.split("/")[-2:]
@@ -46,7 +59,7 @@ class BallDatasets(Dataset):
         status = label_csv.loc[label_csv["file name"] == frame_number, "status"].values[0]
         visibility = label_csv.loc[label_csv["file name"] == frame_number, "visibility"].values[0]
         
-        sample = {"frames" : frames, "annotation" : annotation, "x_true" : x_true, "y_true" : y_true, "status" : status, "visibility" : visibility}
+        sample = {"frames" : frames, "annotation" : seg_labels, "x_true" : x_true, "y_true" : y_true, "status" : status, "visibility" : visibility}
         
         return sample
     
