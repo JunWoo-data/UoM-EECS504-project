@@ -235,11 +235,13 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
                     loss = criterion(outputs, annotations_batch)
                     loss.backward()
                     optimizer.step()
+                    prog_bar.set_description(desc = f"Loss: {loss.item()}")
                 
                 else:
                     with torch.no_grad():
                         outputs = model(frames_batch)
                         loss = criterion(outputs, annotations_batch)
+                        prog_bar.set_description(desc = f"Loss: {loss.item()}")
                 
                 running_loss += loss.item() * batch_size
                 
@@ -293,8 +295,14 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
                         # lr_scheduler.step(valid_losses[-1])
                     break
         
+        print(f"Epoch #{epoch} train loss: {train_losses.value:.3f}")   
+        print(f"Epoch #{epoch} validation loss: {valid_losses.value:.3f}") 
+        end_time = time.time()
+        print(f"Took {((end_time - start_time) / 60):.3f} minutes for epoch {epoch}")
+        
+        
         total_epochs += 1
-        print('Last Epoch time : {:.4f} min'.format((time.time() - start_time) / 60))
+        
         # Display inference mid training and saving model
         if epoch % 50 == 49:
             frames_batch = data["frames"]
@@ -349,7 +357,7 @@ model = TrackNet(in_channels = 9)
 
        
 # %%
-train(model, train_csv, test_csv, batch_size = 1, epochs_num = 1, lr = 1.0, num_classes = 256, input_sequence = 3)
+train(model, train_csv, test_csv, batch_size = 2, epochs_num = 1, lr = 1.0, num_classes = 256, input_sequence = 3)
 # %%
 temp_csv
 
