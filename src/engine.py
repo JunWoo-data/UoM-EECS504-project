@@ -6,8 +6,9 @@ from tqdm.auto import tqdm
 from datasets import BallDatasets
 from datasets_prepare import visualize_frame_heatmap_box
 from torch.utils.data import DataLoader
-from config import DATA_PATH, DEVICE, WIDTH_RESIZE, HEIGHT_RESIZE
-from utils import accuracy, get_center_ball_dist
+from config import DATA_PATH, GT_HEATMAP_PATH, SAVED_STATE_PATH, OUTPUT_PATH, DEVICE, WIDTH_RESIZE, HEIGHT_RESIZE
+from utils import accuracy, get_center_ball_dist, show_result, plot_graph
+from model import TrackNet
 import time
 import pandas as pd
 import numpy as np
@@ -145,7 +146,7 @@ temp_csv
 
 
 # %%
-def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_num = 100, lr = 1.0, num_classes = 256, input_sequence = 1):
+def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_num = 100, lr = 1.0, input_sequence = 1):
     model.to(DEVICE)
     optimizer = torch.optim.Adadelta(model.parameters(), lr = lr)
     lr_scheduler = ReduceLROnPlateau(optimizer, mode = "min", factor = 0.5, patience = 8, verbose = True, min_lr = 0.000001)
@@ -160,8 +161,8 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
     valid_fail_epochs = []
     total_epochs = 0
     
-    train_dataset = BallDatasets(train_csv, WIDTH_RESIZE, HEIGHT_RESIZE)
-    test_dataset = BallDatasets(test_csv, WIDTH_RESIZE, HEIGHT_RESIZE)
+    train_dataset = BallDatasets(train_csv, WIDTH_RESIZE, HEIGHT_RESIZE, num_classes)
+    test_dataset = BallDatasets(test_csv, WIDTH_RESIZE, HEIGHT_RESIZE, num_classes)
     
     print(f"Number of training samples: {len(train_dataset)}")
     print(f"Number of validation samples: {len(test_dataset)}\n")
@@ -208,7 +209,7 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
             n1 = 0
             n2 = 0
             total_success = 0
-            total_fall = 0
+            total_fail = 0
 
             for i, data in enumerate(prog_bar):
                 frames_batch = data["frames"]
@@ -223,7 +224,7 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
                 # for i in range(len(frames_batch)):
                 #     visualize_frame_heatmap_box(frames_batch[0][i].transpose(2, 0) / 255, annotations_batch[i].transpose(2, 0) / 255)
 
-                frames_batch = np.concatenate(frames_batch, axis = 0) 
+                frames_batch = np.concatenate(frames_batch, axis = 1) 
 
                 frames_batch = torch.tensor(frames_batch).to(DEVICE)
                 annotations_batch = torch.tensor(annotations_batch).to(DEVICE)
@@ -297,14 +298,21 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
         print('Last Epoch time : {:.4f} min'.format((time.time() - start_time) / 60))
         # Display inference mid training and saving model
         if epoch % 50 == 49:
-            inputs, labels = data['frames'], data['gt']
-            inputs = inputs.to(device)
-            labels = labels.to(device)
-            with torch.no_grad():
-                outputs = model(inputs)
-                show_result(inputs, labels, outputs)
+            frames_batch = data["frames"]
+            annotations_batch = data["annotation"]
+            
+            if input_sequence == 1:
+                    frames_batch = [frames_batch[0]]
 
-            PATH = f'saved states/tracknet_weights_lr_{lr}_epochs_{total_epochs}.pth'
+            frames_batch = np.concatenate(frames_batch, axis = 1) 
+            frames_batch = torch.tensor(frames_batch).to(DEVICE)
+            annotations_batch = torch.tensor(annotations_batch).to(DEVICE)
+            
+            with torch.no_grad():
+                 outputs = model(frames_batch)
+                 show_result(frames_batch, annotations_batch, outputs)
+
+            PATH = SAVED_STATE_PATH + f'tracknet_weights_lr_{lr}_epochs_{total_epochs}.pth'
             saved_state = dict(model_state=model.state_dict(), train_loss=train_losses, train_acc=train_acc,
                                valid_loss=valid_losses, valid_acc=valid_acc, epochs=total_epochs,
                                train_success=train_success_epochs, train_fail=train_fail_epochs,
@@ -313,7 +321,7 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
             print(f'*** Saved checkpoint ***')
         
      # Saving model`s weights at the end of training
-    PATH = f'saved states/tracknet_weights_lr_{lr}_epochs_{total_epochs}.pth'
+    PATH = SAVED_STATE_PATH + f'tracknet_weights_lr_{lr}_epochs_{total_epochs}.pth'
     saved_state = dict(model_state=model.state_dict(), train_loss=train_losses, train_acc=train_acc,
                        valid_loss=valid_losses, valid_acc=valid_acc, epochs=total_epochs,
                        train_success=train_success_epochs, train_fail=train_fail_epochs,
@@ -322,12 +330,12 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
     print(f'*** Saved checkpoint ***')
     print('Finished Training')
     # Plot training results
-    plot_graph(train_losses, valid_losses, 'loss', f'../report/tracknet_losses_{total_epochs}_epochs.png')
-    plot_graph(train_acc, valid_acc, 'acc', f'../report/tracknet_acc_{total_epochs}_epochs.png')
+    plot_graph(train_losses, valid_losses, 'loss', OUTPUT_PATH + f'tracknet_losses_{total_epochs}_epochs.png')
+    plot_graph(train_acc, valid_acc, 'acc', OUTPUT_PATH + f'tracknet_acc_{total_epochs}_epochs.png')
     plot_graph(
         np.array(train_success_epochs) * 100 / (np.array(train_success_epochs) + np.array(train_fail_epochs)),
         np.array(valid_success_epochs) * 100 / (np.array(valid_success_epochs) + np.array(valid_fail_epochs)),
-        'success acc', f'../report/tracknet_success_acc_{total_epochs}_epochs.png')            
+        'success acc', OUTPUT_PATH + f'tracknet_success_acc_{total_epochs}_epochs.png')            
         
 # %%
 train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
@@ -336,9 +344,13 @@ test_csv = pd.read_csv(DATA_PATH + "test_frames.csv")
 # %%
 temp_csv = train_csv.iloc[:4]
 temp_csv = temp_csv.reset_index()[["frame_i", "frame_im1", "frame_im2", "annotation"]]
-        
+ 
 # %%
-train("model", temp_csv, test_csv, batch_size = 1, epochs_num = 1, lr = 1.0, num_classes = 256, input_sequence = 1)
+model = TrackNet(in_channels = 9)
+
+       
+# %%
+train(model, temp_csv, test_csv, batch_size = 1, epochs_num = 1, lr = 1.0, num_classes = 256, input_sequence = 3)
 # %%
 temp_csv
 
@@ -347,7 +359,7 @@ temp_dataset = BallDatasets(temp_csv, WIDTH_RESIZE, HEIGHT_RESIZE)
 # %%
 temp_loader = DataLoader(
         temp_dataset,
-        batch_size = 1,
+        batch_size = 2,
         shuffle = True,
         num_workers = 0
     )
@@ -356,7 +368,78 @@ temp_loader = DataLoader(
 temp = next(iter(temp_loader))
 
 # %%
-temp
+frames_batch = temp["frames"]
+len(frames_batch)
+
+# %%
+concated = np.concatenate(frames_batch, axis = 1) 
+concated.shape
+
+# %%
+annotation_batch = temp["annotation"]
+annotation_batch.shape
+
+# %%
+seg_labels = np.zeros((  height , width  , nClasses ))
+annotation_batch = annotation_batch[:, 0, :, :]
+annotation_batch.shape
+
+# %%
+for c in range(nClasses):
+	seg_labels[: , : , c ] = (img == c ).astype(int)
+ 
+seg_labels = np.reshape(seg_labels, (width * height, nClasses))
+
+
+# %%
+seg_labels = np.zeros((height, width, num_classes))
+    try:
+        img = cv2.imread(path, 1)
+        img = cv2.resize(img, (width, height))
+        img = img[:, :, 0]
+
+        for c in range(num_classes):
+            seg_labels[:, :, c] = (img == c).astype(int)
+
+    except Exception as e:
+        print(e)
+
+    seg_labels = np.reshape(seg_labels, (width * height, num_classes))
+    seg_labels = seg_labels.transpose([1, 0]).argmax(0)
+
+# %%
+path = GT_HEATMAP_PATH + "clip1/0000.png" 
+path
+
+# %%
+
+width = 640
+height = 360
+nClasses = 256
+
+seg_labels = np.zeros((  height , width  , nClasses ))
+
+# %%
+img = cv2.imread(path, 1)
+img = cv2.resize(img, ( width , height ))
+
+# %%
+img.shape
+
+# %%
+img = img[:, : , 0]
+
+# %%
+img.shape
+# %%
+for c in range(nClasses):
+	seg_labels[: , : , c ] = (img == c ).astype(int)
+ 
+seg_labels = np.reshape(seg_labels, (width * height, nClasses))
+
+# %%
+seg_labels.shape
+
 # %%
 print(len(frames))
 print(len(annotations))
