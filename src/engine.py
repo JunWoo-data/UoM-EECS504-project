@@ -4,24 +4,25 @@ import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm.auto import tqdm
 from datasets import BallDatasets
-from torch.utils.data import DataLoader
-from config import DEVICE, WIDTH_RESIZE, HEIGHT_RESIZE
-import time
-
-from config import DATA_PATH
 from datasets_prepare import visualize_frame_heatmap_box
-from datasets import train_dataset, test_dataset, BallDatasets
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
+from config import DATA_PATH, DEVICE, WIDTH_RESIZE, HEIGHT_RESIZE
+from utils import accuracy, get_center_ball_dist
+import time
 import pandas as pd
 import numpy as np
 import cv2
 from google.colab.patches import cv2_imshow
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib.pyplot import figure
-from PIL import Image
-from utils import gaussian_kernel
-from config import GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE
+
+#from config import DATA_PATH
+#from datasets import train_dataset, test_dataset, BallDatasets
+#from torch.utils.data import Dataset, DataLoader
+# import matplotlib.pyplot as plt
+# import matplotlib.patches as patches
+# from matplotlib.pyplot import figure
+# from PIL import Image
+# from utils import gaussian_kernel
+# from config import GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE
 
 # %%
 train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
@@ -34,6 +35,9 @@ temp_loader = DataLoader(
     shuffle = True,
     num_workers = 0
 )
+
+# %%
+temp_csv
 
 
 # %%
@@ -141,19 +145,27 @@ temp_loader = DataLoader(
 
 
 # %%
-def train(model, train_csv, test_csv, batch_size = 1, epochs_num = 100, lr = 1.0, num_classes = 256, input_sequence = 1):
+def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_num = 100, lr = 1.0, num_classes = 256, input_sequence = 1):
     model.to(DEVICE)
-    optimizer = torch.optim.adadelta(model.parameters(), lr = lr)
+    optimizer = torch.optim.Adadelta(model.parameters(), lr = lr)
     lr_scheduler = ReduceLROnPlateau(optimizer, mode = "min", factor = 0.5, patience = 8, verbose = True, min_lr = 0.000001)
-    criteria = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss()
     saved_state_name = f"saved_state_{lr}_"
     
-    train_loss, valid_loss = [], []
+    train_losses, valid_losses = [], []
     train_acc, valid_acc = [], []
+    train_success_epochs = []
+    train_fail_epochs = []
+    valid_success_epochs = []
+    valid_fail_epochs = []
     total_epochs = 0
     
     train_dataset = BallDatasets(train_csv, WIDTH_RESIZE, HEIGHT_RESIZE)
     test_dataset = BallDatasets(test_csv, WIDTH_RESIZE, HEIGHT_RESIZE)
+    
+    print(f"Number of training samples: {len(train_dataset)}")
+    print(f"Number of validation samples: {len(test_dataset)}\n")
+
     
     train_loader = DataLoader(
         train_dataset,
@@ -185,54 +197,166 @@ def train(model, train_csv, test_csv, batch_size = 1, epochs_num = 100, lr = 1.0
                 data_loader = test_loader 
                 steps_per_epoch = 200 / batch_size 
     
-        print(f"Starting Epoch {epoch + 1} Phase {phase}")
-        running_loss = 0.0
-        running_acc = 0.0
-        running_no_zero_acc = 0.0
-        running_no_zero = 0
-        min_dist = np.inf
-        running_dist = 0.0
-        count = 1
-        n1 = 0
-        n2 = 0
-        total_success = 0
-        total_fall = 0
+            print(f"Starting Epoch {epoch + 1} Phase {phase}")
+            running_loss = 0.0
+            running_acc = 0.0
+            running_no_zero_acc = 0.0
+            running_no_zero = 0
+            min_dist = np.inf
+            running_dist = 0.0
+            count = 1
+            n1 = 0
+            n2 = 0
+            total_success = 0
+            total_fall = 0
+
+            for i, data in enumerate(prog_bar):
+                frames_batch = data["frames"]
+                annotations_batch = data["annotation"]
+                x_true = data["x_true"]
+                y_true = data["y_true"]
+
+                if input_sequence == 1:
+                    frames_batch = [frames_batch[0]]
+
+                # # TODO: delete
+                # for i in range(len(frames_batch)):
+                #     visualize_frame_heatmap_box(frames_batch[0][i].transpose(2, 0) / 255, annotations_batch[i].transpose(2, 0) / 255)
+
+                frames_batch = np.concatenate(frames_batch, axis = 0) 
+
+                frames_batch = torch.tensor(frames_batch).to(DEVICE)
+                annotations_batch = torch.tensor(annotations_batch).to(DEVICE)
         
-        for i, data in enumerate(prog_bar):
-            frames_batch, annotations_batch = data
+                optimizer.zero_grad()
+                
+                if phase == "train":
+                    outputs = model(frames_batch)
+                    loss = criterion(outputs, annotations_batch)
+                    loss.backward()
+                    optimizer.step()
+                
+                else:
+                    with torch.no_grad():
+                        outputs = model(frames_batch)
+                        loss = criterion(outputs, annotations_batch)
+                
+                running_loss += loss.item() * batch_size
+                
+                acc, non_zero_acc, non_zero = accuracy(outputs.argmax(dim = 1).detach().cpu().numpy(),
+                                                       annotations_batch.cpu().numpy())
+
+                dists, success, fail = get_center_ball_dist(outputs.argmax(dim = 1).detach().cpu().numpy(), x_true, y_true, num_classes = num_classes)
+                
+                total_success += success
+                total_fail += fail
+                
+                for j, dist in enumerate(dists.copy()):
+                    if dist in [-1, -2]:
+                        if dist == -1:
+                            n1 +=1
+                        else:
+                            n2 += 1
+                        dists[j] = np.inf
+                    else:
+                        running_dist += dist
+                        count += 1
+                
+                min_dist = min(*dists, min_dist)
+                running_acc += acc
+                running_no_zero_acc += non_zero_acc
+                running_no_zero += non_zero
+                
+                # Display results mid training
+                if (i + 1) % 100 == 0:
+                    print('Phase {} Epoch {} Step {} Loss: {:.8f} Acc: {:.4f}%  Non zero acc: {:.4f}%  '
+                          'Success acc: {:.2f}% Min Dist: {:.4f} Avg Dist {:.4f}'.format(phase, epoch + 1, i + 1,
+                                                                                        running_loss / ((
+                                                                                                                    i + 1) * batch_size),
+                                                                                        running_acc / (i + 1),
+                                                                                        running_no_zero_acc / (i + 1),
+                                                                                        total_success * 100 / (
+                                                                                                    total_success + total_fail),
+                                                                                        min_dist, running_dist / count))
+                    print(f'n1 = {n1}  n2 = {n2}')
+                if (i + 1) == steps_per_epoch:
+                    if phase == 'train':
+                        train_losses.append(running_loss / (i + 1))
+                        train_acc.append(running_no_zero_acc / (i + 1))
+                        train_success_epochs.append(total_success)
+                        train_fail_epochs.append(total_fail)
+                    else:
+                        valid_losses.append(running_loss / (i + 1))
+                        valid_acc.append(running_no_zero_acc / (i + 1))
+                        valid_success_epochs.append(total_success)
+                        valid_fail_epochs.append(total_fail)
+                        # lr_scheduler.step(valid_losses[-1])
+                    break
         
-            if input_sequence == 1:
-                frames_batch = [frames_batch[0]]
-            
-            # # TODO: delete
-            # for i in range(len(frames_batch)):
-            #     visualize_frame_heatmap_box(frames_batch[0][i].transpose(2, 0) / 255, annotations_batch[i].transpose(2, 0) / 255)
-            
-            frames_batch = np.concatenate(frames_batch, axis = 0) 
-            
-            frames_batch = torch.tensor(frames_batch).to(DEVICE)
-            annotations_batch = torch.tensor(annotations_batch).to(DEVICE)
+        total_epochs += 1
+        print('Last Epoch time : {:.4f} min'.format((time.time() - start_time) / 60))
+        # Display inference mid training and saving model
+        if epoch % 50 == 49:
+            inputs, labels = data['frames'], data['gt']
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            with torch.no_grad():
+                outputs = model(inputs)
+                show_result(inputs, labels, outputs)
+
+            PATH = f'saved states/tracknet_weights_lr_{lr}_epochs_{total_epochs}.pth'
+            saved_state = dict(model_state=model.state_dict(), train_loss=train_losses, train_acc=train_acc,
+                               valid_loss=valid_losses, valid_acc=valid_acc, epochs=total_epochs,
+                               train_success=train_success_epochs, train_fail=train_fail_epochs,
+                               valid_success=valid_success_epochs, valid_fail=valid_fail_epochs)
+            torch.save(saved_state, PATH)
+            print(f'*** Saved checkpoint ***')
         
-        #optimizer.zero_grad()
-        # output
-        # loss
-        # loss backqward
-        # optimizer step
-        # prog bar set description 
-        
-     # print train loss
-     # print valid loss
-     # end time time
-     # print time
-        
+     # Saving model`s weights at the end of training
+    PATH = f'saved states/tracknet_weights_lr_{lr}_epochs_{total_epochs}.pth'
+    saved_state = dict(model_state=model.state_dict(), train_loss=train_losses, train_acc=train_acc,
+                       valid_loss=valid_losses, valid_acc=valid_acc, epochs=total_epochs,
+                       train_success=train_success_epochs, train_fail=train_fail_epochs,
+                       valid_success=valid_success_epochs, valid_fail=valid_fail_epochs)
+    torch.save(saved_state, PATH)
+    print(f'*** Saved checkpoint ***')
+    print('Finished Training')
+    # Plot training results
+    plot_graph(train_losses, valid_losses, 'loss', f'../report/tracknet_losses_{total_epochs}_epochs.png')
+    plot_graph(train_acc, valid_acc, 'acc', f'../report/tracknet_acc_{total_epochs}_epochs.png')
+    plot_graph(
+        np.array(train_success_epochs) * 100 / (np.array(train_success_epochs) + np.array(train_fail_epochs)),
+        np.array(valid_success_epochs) * 100 / (np.array(valid_success_epochs) + np.array(valid_fail_epochs)),
+        'success acc', f'../report/tracknet_success_acc_{total_epochs}_epochs.png')            
         
 # %%
-train(temp_loader, "temp")
+train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
+test_csv = pd.read_csv(DATA_PATH + "test_frames.csv")
+
+# %%
+temp_csv = train_csv.iloc[:4]
+temp_csv = temp_csv.reset_index()[["frame_i", "frame_im1", "frame_im2", "annotation"]]
+        
+# %%
+train("model", temp_csv, test_csv, batch_size = 1, epochs_num = 1, lr = 1.0, num_classes = 256, input_sequence = 1)
 # %%
 temp_csv
-# %%
-frames, annotations = next(iter(temp_loader))
 
+# %%
+temp_dataset = BallDatasets(temp_csv, WIDTH_RESIZE, HEIGHT_RESIZE)
+# %%
+temp_loader = DataLoader(
+        temp_dataset,
+        batch_size = 1,
+        shuffle = True,
+        num_workers = 0
+    )
+
+# %%
+temp = next(iter(temp_loader))
+
+# %%
+temp
 # %%
 print(len(frames))
 print(len(annotations))
