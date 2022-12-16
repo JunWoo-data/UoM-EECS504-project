@@ -51,7 +51,7 @@ class TrackNet(nn.Module):
         self.last_layers = nn.Sequential(
             TrackNetBlock(in_channels = 128, out_channels = 64, num_conv = 2, kernel_size = kernel_size, padding = padding, stride = stride, type = "ohter"),
             TrackNetBlock(in_channels = 64, out_channels = self.out_channels, num_conv = 1, kernel_size = kernel_size, padding = padding, stride = stride, type = "ohter"),
-            nn.Softmax(dim = 1)
+            # nn.Softmax(dim = 1)
         )  
         
         self.init_weight()
@@ -60,9 +60,7 @@ class TrackNet(nn.Module):
         batch_size = x.shape[0]
         features = self.encoder_layers(x)
         output = self.last_layers(self.decoder_layers(features))
-        print(output.shape)
         output = output.reshape(batch_size, self.out_channels , -1)
-        print(output.shape)
         
         return output
         
