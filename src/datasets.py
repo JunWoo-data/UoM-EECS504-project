@@ -1,5 +1,5 @@
 # %%
-from config import WIDTH_RESIZE, HEIGHT_RESIZE, DATA_PATH
+from config import WIDTH_RESIZE, HEIGHT_RESIZE, DATA_PATH, FRAME_LABEL_PATH
 from datasets_prepare import visualize_frame_heatmap_box
 import os, sys
 import pandas as pd
@@ -38,13 +38,25 @@ class BallDatasets(Dataset):
         annotation = annotation.astype(np.float32)
         annotation = annotation.transpose([2, 1, 0])
         
-        return frames, annotation
+        frame_i_path = self.csv_file.loc[self.csv_file.index == idx, "frame_i"].values[0]
+        clip_number, frame_number = frame_i_path.split("/")[-2:]
+        label_csv = pd.read_csv(FRAME_LABEL_PATH + clip_number + "/Label.csv")
+        x_true = label_csv.loc[label_csv["file name"] == frame_number, "x-coordinate"].values[0]
+        y_true = label_csv.loc[label_csv["file name"] == frame_number, "y-coordinate"].values[0]
+        status = label_csv.loc[label_csv["file name"] == frame_number, "status"].values[0]
+        visibility = label_csv.loc[label_csv["file name"] == frame_number, "visibility"].values[0]
+        
+        sample = {"frames" : frames, "annotation" : annotation, "x_true" : x_true, "y_true" : y_true, "status" : status, "visibility" : visibility}
+        
+        return sample
     
     def __len__(self):
         return self.csv_file.shape[0]
     
     def visualize_sample(self, idx):
-        sample_frames, sample_annotation = self.__getitem__(idx)
+        sample = self.__getitem__(idx)
+        sample_frames = sample["frames"]
+        sample_annotation = sample["annotation"]
         visualize_frame_heatmap_box(sample_frames[0].transpose([2, 1, 0]) / 255, sample_annotation.transpose([2, 1, 0]))
         
 # # %%
