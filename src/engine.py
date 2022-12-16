@@ -1,8 +1,12 @@
 # %%
 import torch
+import torch.nn as nn 
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm.auto import tqdm
-from datasets import train_loader, test_loader
-from config import DEVICE
+from datasets import BallDatasets
+from torch.utils.data import DataLoader
+from config import DEVICE, WIDTH_RESIZE, HEIGHT_RESIZE
+import time
 
 from config import DATA_PATH
 from datasets_prepare import visualize_frame_heatmap_box
@@ -21,7 +25,7 @@ from config import GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE
 
 # %%
 train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
-temp_csv = train_csv.iloc[1:3]
+temp_csv = train_csv.iloc[:4]
 temp_csv = temp_csv.reset_index()[["frame_i", "frame_im1", "frame_im2", "annotation"]]
 temp_dataset = BallDatasets(temp_csv, 640, 360)
 temp_loader = DataLoader(
@@ -137,31 +141,89 @@ temp_loader = DataLoader(
 
 
 # %%
-def train(train_loader, model, input_sequence = 1):
-    print("Training.........")
+def train(model, train_csv, test_csv, batch_size = 1, epochs_num = 100, lr = 1.0, num_classes = 256, input_sequence = 1):
+    model.to(DEVICE)
+    optimizer = torch.optim.adadelta(model.parameters(), lr = lr)
+    lr_scheduler = ReduceLROnPlateau(optimizer, mode = "min", factor = 0.5, patience = 8, verbose = True, min_lr = 0.000001)
+    criteria = nn.CrossEntropyLoss()
+    saved_state_name = f"saved_state_{lr}_"
     
-    global train_itr
-    global train_loss_list
+    train_loss, valid_loss = [], []
+    train_acc, valid_acc = [], []
+    total_epochs = 0
+    
+    train_dataset = BallDatasets(train_csv, WIDTH_RESIZE, HEIGHT_RESIZE)
+    test_dataset = BallDatasets(test_csv, WIDTH_RESIZE, HEIGHT_RESIZE)
+    
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size = batch_size,
+        shuffle = True,
+        num_workers = 0
+    )
+
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size = batch_size,
+        shuffle = True,
+        num_workers = 0
+    )
     
     prog_bar = tqdm(train_loader, total = len(train_loader))
     
-    for i, data in enumerate(prog_bar):
+    print("Training.........")
+    
+    for epoch in range(epochs_num):
+        start_time = time.time()
+        for phase in ["train", "val"]:
+            if phase == "train":
+                model.train(True)
+                data_loader = train_loader 
+                steps_per_epoch = 400 / batch_size 
+            else:
+                model.train(False)
+                data_loader = test_loader 
+                steps_per_epoch = 200 / batch_size 
+    
+        print(f"Starting Epoch {epoch + 1} Phase {phase}")
+        running_loss = 0.0
+        running_acc = 0.0
+        running_no_zero_acc = 0.0
+        running_no_zero = 0
+        min_dist = np.inf
+        running_dist = 0.0
+        count = 1
+        n1 = 0
+        n2 = 0
+        total_success = 0
+        total_fall = 0
+        
+        for i, data in enumerate(prog_bar):
+            frames_batch, annotations_batch = data
+        
+            if input_sequence == 1:
+                frames_batch = [frames_batch[0]]
+            
+            # # TODO: delete
+            # for i in range(len(frames_batch)):
+            #     visualize_frame_heatmap_box(frames_batch[0][i].transpose(2, 0) / 255, annotations_batch[i].transpose(2, 0) / 255)
+            
+            frames_batch = np.concatenate(frames_batch, axis = 0) 
+            
+            frames_batch = torch.tensor(frames_batch).to(DEVICE)
+            annotations_batch = torch.tensor(annotations_batch).to(DEVICE)
+        
         #optimizer.zero_grad()
+        # output
+        # loss
+        # loss backqward
+        # optimizer step
+        # prog bar set description 
         
-        frames_batch, annotations_batch = data
-        
-        if input_sequence == 1:
-            frames_batch = [frames_batch[0]]
-        
-        # TODO: delete
-        for i in range(len(frames_batch)):
-            visualize_frame_heatmap_box(frames_batch[i].transpose(2, 0) / 255, annotations_batch[i].transpose(2, 0) / 255)
-        
-        frames_batch = np.concatenate(frames_batch, axis = 0) 
-        
-        frames_batch = torch.tensor(frames_batch).to(DEVICE)
-        annotation = torch.tensor(annotation).to(DEVICE)
-        
+     # print train loss
+     # print valid loss
+     # end time time
+     # print time
         
         
 # %%
@@ -179,13 +241,11 @@ print(len(annotations))
 frames = [frames[0]]
 
 # %%
-frames.shape
-# %%
 check = np.concatenate(frames, axis = 0)
 check.shape
 
 # %%
-torch.tensor(check).to(DEVICE)
+frames[0][0].shape
 
 # %%
 len(frame)
