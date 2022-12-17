@@ -163,49 +163,46 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
                                                                                                     total_success + total_fail),
                                                                                         min_dist, running_dist / count))
                     print(f'n1 = {n1}  n2 = {n2}')
-                if (i + 1) == steps_per_epoch:
-                    if phase == 'train':
-                        train_losses.append(running_loss / (i + 1))
-                        train_acc.append(running_no_zero_acc / (i + 1))
-                        train_success_epochs.append(total_success)
-                        train_fail_epochs.append(total_fail)
-                    else:
-                        valid_losses.append(running_loss / (i + 1))
-                        valid_acc.append(running_no_zero_acc / (i + 1))
-                        valid_success_epochs.append(total_success)
-                        valid_fail_epochs.append(total_fail)
-                        # lr_scheduler.step(valid_losses[-1])
-                    break
+                # if (i + 1) == steps_per_epoch:
+                if phase == 'train':
+                    train_losses.append(running_loss / (i + 1))
+                    train_acc.append(running_no_zero_acc / (i + 1))
+                    train_success_epochs.append(total_success)
+                    train_fail_epochs.append(total_fail)
+                else:
+                    valid_losses.append(running_loss / (i + 1))
+                    valid_acc.append(running_no_zero_acc / (i + 1))
+                    valid_success_epochs.append(total_success)
+                    valid_fail_epochs.append(total_fail)
+                #    break
         
         end_time = time.time()
         print(f"Took {((end_time - start_time) / 60):.3f} minutes for epoch {epoch}")
         
-        
         total_epochs += 1
         
         # Display inference mid training and saving model
-        if epoch % 50 == 49:
-            frames_batch = data["frames"]
-            annotations_batch = data["annotation"]
-            
-            if input_sequence == 1:
-                    frames_batch = [frames_batch[0]]
+        # if epoch % 50 == 49:
+        frames_batch = data["frames"]
+        annotations_batch = data["annotation"]
+        
+        if input_sequence == 1:
+                frames_batch = [frames_batch[0]]
+        frames_batch = np.concatenate(frames_batch, axis = 1) 
+        frames_batch = torch.tensor(frames_batch).to(DEVICE)
+        annotations_batch = torch.tensor(annotations_batch).to(DEVICE)
+        
+        with torch.no_grad():
+             outputs = model(frames_batch)
+             show_result(frames_batch, annotations_batch, outputs)
 
-            frames_batch = np.concatenate(frames_batch, axis = 1) 
-            frames_batch = torch.tensor(frames_batch).to(DEVICE)
-            annotations_batch = torch.tensor(annotations_batch).to(DEVICE)
-            
-            with torch.no_grad():
-                 outputs = model(frames_batch)
-                 show_result(frames_batch, annotations_batch, outputs)
-
-            PATH = SAVED_STATE_PATH + f'tracknet_weights_lr_{lr}_epochs_{total_epochs}.pth'
-            saved_state = dict(model_state=model.state_dict(), train_loss=train_losses, train_acc=train_acc,
-                               valid_loss=valid_losses, valid_acc=valid_acc, epochs=total_epochs,
-                               train_success=train_success_epochs, train_fail=train_fail_epochs,
-                               valid_success=valid_success_epochs, valid_fail=valid_fail_epochs)
-            torch.save(saved_state, PATH)
-            print(f'*** Saved checkpoint ***')
+            # PATH = SAVED_STATE_PATH + f'tracknet_weights_lr_{lr}_epochs_{total_epochs}.pth'
+            # saved_state = dict(model_state=model.state_dict(), train_loss=train_losses, train_acc=train_acc,
+            #                    valid_loss=valid_losses, valid_acc=valid_acc, epochs=total_epochs,
+            #                    train_success=train_success_epochs, train_fail=train_fail_epochs,
+            #                    valid_success=valid_success_epochs, valid_fail=valid_fail_epochs)
+            # torch.save(saved_state, PATH)
+            # print(f'*** Saved checkpoint ***')
         
      # Saving model`s weights at the end of training
     PATH = SAVED_STATE_PATH + f'tracknet_weights_lr_{lr}_epochs_{total_epochs}.pth'
@@ -223,7 +220,8 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
         np.array(train_success_epochs) * 100 / (np.array(train_success_epochs) + np.array(train_fail_epochs)),
         np.array(valid_success_epochs) * 100 / (np.array(valid_success_epochs) + np.array(valid_fail_epochs)),
         'success acc', OUTPUT_PATH + f'tracknet_success_acc_{total_epochs}_epochs.png')            
-        
+
+    return train_losses, valid_losses, train_acc, valid_acc
 # %%
 train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
 test_csv = pd.read_csv(DATA_PATH + "test_frames.csv")
