@@ -14,6 +14,8 @@ import pandas as pd
 import numpy as np
 import cv2
 from google.colab.patches import cv2_imshow
+import gc
+
 
 #from config import DATA_PATH
 #from datasets import train_dataset, test_dataset, BallDatasets
@@ -24,126 +26,6 @@ from google.colab.patches import cv2_imshow
 # from PIL import Image
 # from utils import gaussian_kernel
 # from config import GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_VARIANCE
-
-# %%
-train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
-temp_csv = train_csv.iloc[:4]
-temp_csv = temp_csv.reset_index()[["frame_i", "frame_im1", "frame_im2", "annotation"]]
-temp_dataset = BallDatasets(temp_csv, 640, 360)
-temp_loader = DataLoader(
-    temp_dataset,
-    batch_size = 2,
-    shuffle = True,
-    num_workers = 0
-)
-
-# %%
-temp_csv
-
-
-# %%
-# temp_img = cv2.imread(temp_csv.iloc[2][0])
-# cv2_imshow(temp_img)
-
-# # %%
-# temp_annot = cv2.imread(temp_csv.iloc[2][3])
-# cv2_imshow(temp_annot)
-
-# # %% 
-# print(temp_csv.iloc[2][0])
-# print(temp_csv.iloc[2][3])
-
-# # %%
-# visualize_frame_heatmap_box(temp_img, temp_annot)
-
-# # %%
-# img = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip17/0020.jpg")
-# ant = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip17/0020.png")
-# cv2_imshow(img)
-# cv2_imshow(ant)
-# visualize_frame_heatmap_box(img, ant)
-
-# # %%
-# img00 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip1/0000.jpg")
-# ant00 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip1/0000.png")
-# cv2_imshow(img00)
-# cv2_imshow(ant00)
-# visualize_frame_heatmap_box(img00, ant00)
-
-
-# # %%
-
-
-# # %%
-# y = 423
-# x = 599
-# xmin = x - 5
-# ymin = y - 5
-# xmax = x + 5
-# ymax = y + 5
-
-# xy = (int(xmin), int(ymin))
-# height = int(ymax - ymin)
-# width = int(xmax - xmin)    
-
-# fig, ax = plt.subplots(figsize = (15, 10))
-# ax.imshow(ant00)
-
-# rect = patches.Rectangle(xy, width, height, linewidth = 2, edgecolor = 'r', facecolor = 'none')
-# ax.add_patch(rect)
-
-# plt.show()
-
-# # %%
-# x = 1095
-# y = 435 
-# xmin = x - 5
-# ymin = y - 5
-# xmax = x + 5
-# ymax = y + 5
-
-# xy = (int(xmin), int(ymin))
-# height = int(ymax - ymin)
-# width = int(xmax - xmin)    
-
-# #create a black image
-# heatmap = Image.new("RGB", (1280, 720))
-# pix = heatmap.load()
-# for i in range(1280):
-#     for j in range(720):
-#             pix[i,j] = (0, 0, 0)
-# #copy the heatmap on it
-# gaussian_kernel_array = gaussian_kernel(GAUSSIAN_KERNEL_VARIANCE)   
-
-# for i in range(-GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE + 1):
-#     for j in range(-GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE + 1):
-#         if (x + i < 1280) and (x + i >= 0) and (y + j < 720) and (y + j >= 0):
-#             kernel_element = gaussian_kernel_array[j + GAUSSIAN_KERNEL_SIZE][i + GAUSSIAN_KERNEL_SIZE]
-#             if kernel_element > 0:
-#                 pix[x + i, y + j] = (kernel_element,kernel_element,kernel_element)
-
-# # %%
-# fig, ax = plt.subplots(figsize = (15, 10))
-# ax.imshow(heatmap)
-
-# rect = patches.Rectangle(xy, width, height, linewidth = 2, edgecolor = 'r', facecolor = 'none')
-# ax.add_patch(rect)
-
-# # %%
-# img28 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip1/0028.jpg")
-# ant28 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip1/0028.png")
-# cv2_imshow(img28)
-# cv2_imshow(ant28)
-# visualize_frame_heatmap_box(img28, ant28)
-
-# # %%
-# # %%
-# img29 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/frame_label/clip1/0029.jpg")
-# ant29 = cv2.imread("/content/drive/My Drive/eecs504/project/data/dataset/ground_truth_heatmap/clip1/0029.png")
-# cv2_imshow(img29)
-# cv2_imshow(ant29)
-# visualize_frame_heatmap_box(img29, ant29)
-
 
 # %%
 def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_num = 100, lr = 1.0, input_sequence = 1):
@@ -295,8 +177,6 @@ def train(model, train_csv, test_csv, num_classes = 256, batch_size = 1, epochs_
                         # lr_scheduler.step(valid_losses[-1])
                     break
         
-        print(f"Epoch #{epoch} train loss: {train_losses.value:.3f}")   
-        print(f"Epoch #{epoch} validation loss: {valid_losses.value:.3f}") 
         end_time = time.time()
         print(f"Took {((end_time - start_time) / 60):.3f} minutes for epoch {epoch}")
         
@@ -349,15 +229,25 @@ train_csv = pd.read_csv(DATA_PATH + "train_frames.csv")
 test_csv = pd.read_csv(DATA_PATH + "test_frames.csv")
 
 # %%
-temp_csv = train_csv.iloc[:4]
-temp_csv = temp_csv.reset_index()[["frame_i", "frame_im1", "frame_im2", "annotation"]]
+train_reduced_csv = train_csv.iloc[:1000]
+train_reduced_csv = train_reduced_csv.reset_index()[["frame_i", "frame_im1", "frame_im2", "annotation"]]
+train_reduced_csv.shape
+
+# %%
+test_reduced_csv = test_csv.iloc[:100]
+test_reduced_csv = test_reduced_csv.reset_index()[["frame_i", "frame_im1", "frame_im2", "annotation"]]
+test_reduced_csv.shape
  
+ 
+# %%
+gc.collect()
+torch.cuda.empty_cache()
 # %%
 model = TrackNet(in_channels = 9)
 
        
 # %%
-train(model, train_csv, test_csv, batch_size = 2, epochs_num = 1, lr = 1.0, num_classes = 256, input_sequence = 3)
+train(model, train_reduced_csv, test_reduced_csv, batch_size = 2, epochs_num = 1, lr = 1.0, num_classes = 256, input_sequence = 3)
 # %%
 temp_csv
 
